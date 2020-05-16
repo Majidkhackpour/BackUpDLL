@@ -30,11 +30,10 @@ namespace BackUpDLL
                     token.ThrowIfCancellationRequested();
                     dlg.Filter = "*.Bak|*.Bak";
                     token.ThrowIfCancellationRequested();
-                    string result;
                     token.ThrowIfCancellationRequested();
                     if (dlg.ShowDialog() != DialogResult.OK) return false;
                     token.ThrowIfCancellationRequested();
-                    result = DatabaseAction.BackupDB(connectionString, dlg.FileName);
+                    var result = DatabaseAction.BackupDB(connectionString, dlg.FileName);
                     token.ThrowIfCancellationRequested();
 
                     if (result != "")
@@ -76,58 +75,52 @@ namespace BackUpDLL
             {
                 if (path == "")
                 {
-                    var OFD = new OpenFileDialog();
-                    OFD.Multiselect = false;
-                    OFD.Title = @"فایل حاوی اطلاعات پشتیبانی نرم افزار را انتخاب نمائید";
-
-                    if (OFD.ShowDialog(owner) == DialogResult.OK)
+                    var OFD = new OpenFileDialog
                     {
-                        var backUpVersion = GetBackUpVersion(connctionString, OFD.FileName);
-                        var dataBaseVersion = GetDataBaseVersion(connctionString);
-                        if (backUpVersion > dataBaseVersion)
-                        {
-                            MessageBox.Show($@"{backUpVersion} نسخه فایل پشتیبان" + " \r\n" +
-                                            $@"{dataBaseVersion} نسخه دیتابیس" + "\r\n" +
-                                            "بدلیل بالاتر بودن نسخه پشتیبان نسبت به دیتابیس، امکان بازگردانی وجود ندارد");
-                            return false;
-                        }
+                        Multiselect = false,
+                        Title = @"فایل حاوی اطلاعات پشتیبانی نرم افزار را انتخاب نمائید"
+                    };
 
-                        SqlConnection.ClearAllPools();
-
-                        if (DatabaseAction.ReStoreDB(connctionString, OFD.FileName, autoBackup) == "")
-                        {
-
-                            MessageBox.Show("بازگردانی اطلاعات با موفقیت انجام شد", "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            var exepath = Path.Combine(Application.StartupPath, System.Diagnostics.Process.GetCurrentProcess().ProcessName + ".exe");
-                            System.Diagnostics.Process.Start(exepath);
-                            return true;
-                        }
-                        else
-                        {
-                            MessageBox.Show(" خطا در بازگردانی اطلاعات ", "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            DatabaseAction.SetMultiUser(connctionString);
-                            return false;
-                        }
-
+                    if (OFD.ShowDialog(owner) != DialogResult.OK) return false;
+                    var backUpVersion = GetBackUpVersion(connctionString, OFD.FileName);
+                    var dataBaseVersion = GetDataBaseVersion(connctionString);
+                    if (backUpVersion > dataBaseVersion)
+                    {
+                        MessageBox.Show($@"{backUpVersion} نسخه فایل پشتیبان" + " \r\n" +
+                                        $@"{dataBaseVersion} نسخه دیتابیس" + "\r\n" +
+                                        "بدلیل بالاتر بودن نسخه پشتیبان نسبت به دیتابیس، امکان بازگردانی وجود ندارد");
+                        return false;
                     }
-                    return false;
 
-                }
-                else
-                {
-                    string restoreMessage = DatabaseAction.ReStoreDB(connctionString, path, autoBackup);
-                    if (restoreMessage == "")
+                    SqlConnection.ClearAllPools();
+
+                    if (DatabaseAction.ReStoreDB(connctionString, OFD.FileName, autoBackup) == "")
                     {
 
-                        MessageBox.Show("بازگردانی اطلاعات با موفقیت انجام شد", "پیغام سیستم", MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
+                        MessageBox.Show("بازگردانی اطلاعات با موفقیت انجام شد", "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        var exepath = Path.Combine(Application.StartupPath, System.Diagnostics.Process.GetCurrentProcess().ProcessName + ".exe");
+                        System.Diagnostics.Process.Start(exepath);
                         return true;
                     }
                     else
                     {
-                        MessageBox.Show(" خطا در بازگردانی اطلاعات " + Environment.NewLine + restoreMessage, "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(" خطا در بازگردانی اطلاعات ", "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        DatabaseAction.SetMultiUser(connctionString);
                         return false;
                     }
+
+                }
+                else
+                {
+                    var restoreMessage = DatabaseAction.ReStoreDB(connctionString, path, autoBackup);
+                    if (restoreMessage == "")
+                    {
+                        MessageBox.Show("بازگردانی اطلاعات با موفقیت انجام شد", "پیغام سیستم", MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                        return true;
+                    }
+                    MessageBox.Show(" خطا در بازگردانی اطلاعات " + Environment.NewLine + restoreMessage, "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
                 }
             }
             catch (Exception ex)
@@ -140,34 +133,21 @@ namespace BackUpDLL
         private static float GetBackUpVersion(string connctionString, string backUpFileName)
         {
             var ver = (float)0;
-            var line = 0;
             try
             {
                 var cn = new SqlConnection(connctionString);
-
-                line = 1;
-                line = 11;
                 if (string.IsNullOrEmpty(backUpFileName)) return ver;
-                line = 12;
                 var command = @"RESTORE HEADERONLY FROM DISK ='" + backUpFileName + "'";
-                line = 13;
 
                 using (var sqlCommand = new SqlCommand(command, cn))
                 {
-                    line = 14;
                     cn.Open();
-                    line = 15;
                     var sqlDataReader = sqlCommand.ExecuteReader();
-                    line = 16;
                     while (sqlDataReader.Read())
                     {
-                        line = 17;
                         Console.WriteLine();
-                        line = 18;
                         var d = $"{sqlDataReader["DatabaseVersion"]}";
-                        line = 19;
                         if (string.IsNullOrEmpty(d)) continue;
-                        line = 20;
                         switch (d)
                         {
                             case "406": ver = 6; break;
@@ -186,15 +166,13 @@ namespace BackUpDLL
                             default: ver = 0; break;
                         }
 
-                        line = 21;
                         return ver;
                     }
                 }
             }
             catch (Exception ex)
             {
-                WebErrorLog.ErrorInstence.StartErrorLog(ex,
-                    $"Error In Line{line} With ConnectionString:{connctionString} AND BackUpFileName:{backUpFileName}");
+                WebErrorLog.ErrorInstence.StartErrorLog(ex);
                 ver = 0;
             }
 

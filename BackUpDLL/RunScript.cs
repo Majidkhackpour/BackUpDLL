@@ -27,7 +27,6 @@ namespace BackUpDLL
                 };
                 if (transaction != null)
                     cmd.Transaction = transaction;
-                var errors = "";
                 foreach (var item in scripts)
                     ret.AddReturnedValue(await ExecuteAsync(item, cmd));
             }

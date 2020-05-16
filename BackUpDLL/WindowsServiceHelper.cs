@@ -6,7 +6,7 @@ using ServiceState = Microsoft.SqlServer.Management.Smo.Wmi.ServiceState;
 
 namespace BackUpDLL
 {
-   public class WindowsServiceHelper
+    public class WindowsServiceHelper
     {
         private const int STANDARD_RIGHTS_REQUIRED = 0xF0000;
         private const int SERVICE_WIN32_OWN_PROCESS = 0x00000010;
@@ -67,11 +67,11 @@ namespace BackUpDLL
 
         public static void Uninstall(string serviceName)
         {
-            IntPtr scm = OpenSCManager(ScmAccessRights.AllAccess);
+            var scm = OpenSCManager(ScmAccessRights.AllAccess);
 
             try
             {
-                IntPtr service = OpenService(scm, serviceName, ServiceAccessRights.AllAccess);
+                var service = OpenService(scm, serviceName, ServiceAccessRights.AllAccess);
                 if (service == IntPtr.Zero)
                     throw new ApplicationException("Service not installed.");
 
@@ -94,11 +94,11 @@ namespace BackUpDLL
 
         public static bool ServiceIsInstalled(string serviceName)
         {
-            IntPtr scm = OpenSCManager(ScmAccessRights.Connect);
+            var scm = OpenSCManager(ScmAccessRights.Connect);
 
             try
             {
-                IntPtr service = OpenService(scm, serviceName, ServiceAccessRights.QueryStatus);
+                var service = OpenService(scm, serviceName, ServiceAccessRights.QueryStatus);
 
                 if (service == IntPtr.Zero)
                     return false;
@@ -114,11 +114,11 @@ namespace BackUpDLL
 
         public static void InstallAndStart(string serviceName, string displayName, string fileName)
         {
-            IntPtr scm = OpenSCManager(ScmAccessRights.AllAccess);
+            var scm = OpenSCManager(ScmAccessRights.AllAccess);
 
             try
             {
-                IntPtr service = OpenService(scm, serviceName, ServiceAccessRights.AllAccess);
+                var service = OpenService(scm, serviceName, ServiceAccessRights.AllAccess);
 
                 if (service == IntPtr.Zero)
                     service = CreateService(scm, serviceName, displayName, ServiceAccessRights.AllAccess, SERVICE_WIN32_OWN_PROCESS, ServiceBootFlag.AutoStart, ServiceError.Normal, fileName, null, IntPtr.Zero, null, null, null);
