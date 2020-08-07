@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Net;
 using Microsoft.SqlServer.Management.Smo.Wmi;
-using PacketParser.Services;
+using Services;
+using ServiceState = Microsoft.SqlServer.Management.Smo.Wmi.ServiceState;
 
 namespace BackUpDLL
 {

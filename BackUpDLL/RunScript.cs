@@ -2,8 +2,7 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
-using PacketParser;
-using PacketParser.Services;
+using Services;
 
 namespace BackUpDLL
 {
@@ -27,6 +26,7 @@ namespace BackUpDLL
                 };
                 if (transaction != null)
                     cmd.Transaction = transaction;
+                if (cn.State != ConnectionState.Open) cn.Open();
                 foreach (var item in scripts)
                     ret.AddReturnedValue(await ExecuteAsync(item, cmd));
             }
