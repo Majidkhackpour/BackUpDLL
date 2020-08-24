@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Management;
 using System.Threading;
 using Services;
+using SevenZip;
 using SharpCompress.Compressors.Deflate;
+using ProgressEventArgs = System.Management.ProgressEventArgs;
 
 namespace BackUpDLL
 {
@@ -103,7 +104,6 @@ namespace BackUpDLL
                 line = 3;
                 cmp = new SevenZipCompressor();
                 line = 4;
-                cmp.Compressing += new EventHandler<ProgressEventArgs>(cmp_Compressing);
                 line = 5;
                 line = 6;
                 cmp.CompressionFinished += new EventHandler<EventArgs>(cmp_CompressionFinished);

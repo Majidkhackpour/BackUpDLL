@@ -2,20 +2,28 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.IO;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.SqlServer.Management.Smo;
 using Services;
+using SharpCompress.Archives;
+using SharpCompress.Archives.GZip;
+using SharpCompress.Common;
 
 namespace BackUpDLL
 {
     public class DataBase
     {
-        public static bool BackUpStart(string connectionString, string fileLocation = "", bool autoBackUp = false, CancellationToken token = default)
+        public static bool Finish_Event;
+        public static async Task<ReturnedSaveFuncInfo> BackUpStartAsync(string connectionString, ENSource Source, string path = "", Guid? Guid = null, CancellationToken token = default)
         {
+            var ret = new ReturnedSaveFuncInfo();
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (fileLocation == "")
+                if (path == "")
                 {
                     token.ThrowIfCancellationRequested();
                     var dlg = new SaveFileDialog { Title = @"پشتیبان گیری اطلاعات نوین پرداز" };
@@ -28,126 +36,150 @@ namespace BackUpDLL
                     file = file.Replace(" ", "");
                     dlg.FileName = file;
                     token.ThrowIfCancellationRequested();
-                    dlg.Filter = "*.Bak|*.Bak";
+                    dlg.Filter = "*.NPZ2|*.NPZ2";
                     token.ThrowIfCancellationRequested();
                     token.ThrowIfCancellationRequested();
-                    if (dlg.ShowDialog() != DialogResult.OK) return false;
-                    token.ThrowIfCancellationRequested();
-                    var result = DatabaseAction.BackupDB(connectionString, dlg.FileName);
-                    token.ThrowIfCancellationRequested();
-
-                    if (result != "")
+                    if (dlg.ShowDialog() != DialogResult.OK)
                     {
-                        MessageBox.Show(@"پشتیبان گیری با موفقیت انجام شد", @"پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.RightAlign);
-                        return true;
+                        ret.AddReturnedValue(ReturnedState.Warning, "لغو  توسط کاربر. عدم انتخاب آدرس ذخیره سازی.");
+                        return ret;
                     }
-                    MessageBox.Show(@"خطا در عملیات پشتیبان گیری اطلاعات", @"پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, MessageBoxOptions.RightAlign);
-                    return false;
+                    path = dlg.FileName;
                 }
-                else
-                {
-                    token.ThrowIfCancellationRequested();
-                    var result = DatabaseAction.BackupDB(connectionString, fileLocation);
-                    if (result != "")
-                    {
-                        token.ThrowIfCancellationRequested();
-                        if (autoBackUp == false) { MessageBox.Show("پشتیبان گیری با موفیقیت انجام شد", "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.RightAlign); }
-
-                        return true;
-                    }
-                    token.ThrowIfCancellationRequested();
-                    if (autoBackUp == false) { MessageBox.Show("خطا در عملیات پشتیبان گیری اطلاعات", "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, MessageBoxOptions.RightAlign); }
-
-                    return false;
-                }
+                token.ThrowIfCancellationRequested();
+                ret.AddReturnedValue(await DatabaseAction.BackupDbAsync(connectionString, Source, path, Guid, token));
             }
-            catch (ThreadAbortException) { return false; }
-            catch (OperationCanceledException) { return false; }
+            catch (ThreadAbortException ex) { ret.AddReturnedValue(ex); }
+            catch (OperationCanceledException ex) { ret.AddReturnedValue(ex); }
             catch (Exception ex)
             {
                 WebErrorLog.ErrorInstence.StartErrorLog(ex);
-                return false;
+                Finish_Event = true;
+                ret.AddReturnedValue(ex);
             }
+            return ret;
         }
-        public static bool ReStoreStart(string connctionString, IWin32Window owner, string path = "", bool autoBackup = true)
+
+        public static async Task<ReturnedSaveFuncInfo> ReStoreStartAsync(string connectionString, ENSource Source, string path = "", bool autoBackup = true)
         {
+            var ret = new ReturnedSaveFuncInfo();
             try
             {
-                if (path == "")
+                if (string.IsNullOrEmpty(path))
                 {
-                    var OFD = new OpenFileDialog
+                    var ofd = new OpenFileDialog
                     {
                         Multiselect = false,
+                        Filter = @"Backup Files(*.NPZ;*.NPZ2;*.BAK)|*.NPZ;*.NPZ2;*.BAK",
                         Title = @"فایل حاوی اطلاعات پشتیبانی نرم افزار را انتخاب نمائید"
                     };
 
-                    if (OFD.ShowDialog(owner) != DialogResult.OK) return false;
-                    var backUpVersion = GetBackUpVersion(connctionString, OFD.FileName);
-                    var dataBaseVersion = GetDataBaseVersion(connctionString);
-                    if (backUpVersion > dataBaseVersion)
+                    if (ofd.ShowDialog() != DialogResult.OK)
                     {
-                        MessageBox.Show($@"{backUpVersion} نسخه فایل پشتیبان" + " \r\n" +
-                                        $@"{dataBaseVersion} نسخه دیتابیس" + "\r\n" +
-                                        "بدلیل بالاتر بودن نسخه پشتیبان نسبت به دیتابیس، امکان بازگردانی وجود ندارد");
-                        return false;
+                        ret.AddReturnedValue(ReturnedState.Warning, "بازگردانی اطلاعات توسط کاربر لغو شد. عدم انتخاب آدرس ذخیره سازی فایل.");
+                        return ret;
                     }
-
-                    SqlConnection.ClearAllPools();
-
-                    if (DatabaseAction.ReStoreDB(connctionString, OFD.FileName, autoBackup) == "")
-                    {
-
-                        MessageBox.Show("بازگردانی اطلاعات با موفقیت انجام شد", "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        var exepath = Path.Combine(Application.StartupPath, System.Diagnostics.Process.GetCurrentProcess().ProcessName + ".exe");
-                        System.Diagnostics.Process.Start(exepath);
-                        return true;
-                    }
-                    else
-                    {
-                        MessageBox.Show(" خطا در بازگردانی اطلاعات ", "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        DatabaseAction.SetMultiUser(connctionString);
-                        return false;
-                    }
-
+                    path = ofd.FileName;
                 }
-                else
+
+                var backUpVersion = GetBackUpVersion(connectionString, path);
+                var dataBaseVersion = GetDataBaseVersion(connectionString);
+                if (backUpVersion > dataBaseVersion)
                 {
-                    var restoreMessage = DatabaseAction.ReStoreDB(connctionString, path, autoBackup);
-                    if (restoreMessage == "")
-                    {
-                        MessageBox.Show("بازگردانی اطلاعات با موفقیت انجام شد", "پیغام سیستم", MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
-                        return true;
-                    }
-                    MessageBox.Show(" خطا در بازگردانی اطلاعات " + Environment.NewLine + restoreMessage, "پیغام سیستم", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
+                    ret.AddReturnedValue(ReturnedState.Error, $@"{backUpVersion} نسخه فایل پشتیبان" + " \r\n" +
+                                    $@"{dataBaseVersion} نسخه دیتابیس" + "\r\n" +
+                                    "بدلیل بالاتر بودن نسخه پشتیبان نسبت به دیتابیس، امکان بازگردانی وجود ندارد");
+                    return ret;
                 }
+
+                SqlConnection.ClearAllPools();
+                ret.AddReturnedValue(await DatabaseAction.ReStoreDbAsync(connectionString, path, autoBackup, Source));
             }
             catch (Exception ex)
             {
                 WebErrorLog.ErrorInstence.StartErrorLog(ex);
-                return false;
+                ret.AddReturnedValue(ex);
             }
+            return ret;
         }
 
         private static float GetBackUpVersion(string connctionString, string backUpFileName)
         {
             var ver = (float)0;
+            var line = 0;
             try
             {
                 var cn = new SqlConnection(connctionString);
+
+                line = 1;
+                if (backUpFileName.EndsWith(".NPZ") || backUpFileName.EndsWith(".npz"))
+                {
+                    var zp = new Zip();
+                    line = 2;
+                    backUpFileName = zp.ExtractTempDIR(backUpFileName);
+                }
+
+
+                else if (backUpFileName.EndsWith(".NPZ2") || backUpFileName.EndsWith(".npz2"))
+                {
+                    try
+                    {
+                        line = 3;
+                        var pathtemp = Zip.TempDirName();
+                        line = 4;
+                        var fileInfo = new FileInfo(backUpFileName);
+                        line = 5;
+                        pathtemp = Path.Combine(pathtemp, fileInfo.Name);
+                        line = 6;
+                        pathtemp = Path.ChangeExtension(pathtemp, ".bak");
+                        line = 7;
+                        using (var archive = GZipArchive.Open(backUpFileName))
+                        {
+                            line = 8;
+                            foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
+                            {
+                                line = 9;
+                                entry.WriteToFile(pathtemp, new ExtractionOptions()
+                                {
+                                    ExtractFullPath = true,
+                                    Overwrite = true
+                                });
+                            }
+                        }
+
+                        line = 10;
+                        backUpFileName = pathtemp;
+                    }
+                    catch
+                    {
+                        var zp = new Zip();
+                        line = 2000;
+                        backUpFileName = zp.ExtractTempDIR(backUpFileName);
+                    }
+                }
+
+                line = 11;
                 if (string.IsNullOrEmpty(backUpFileName)) return ver;
+                line = 12;
                 var command = @"RESTORE HEADERONLY FROM DISK ='" + backUpFileName + "'";
+                line = 13;
 
                 using (var sqlCommand = new SqlCommand(command, cn))
                 {
+                    line = 14;
                     cn.Open();
+                    line = 15;
                     var sqlDataReader = sqlCommand.ExecuteReader();
+                    line = 16;
                     while (sqlDataReader.Read())
                     {
+                        line = 17;
                         Console.WriteLine();
+                        line = 18;
                         var d = $"{sqlDataReader["DatabaseVersion"]}";
+                        line = 19;
                         if (string.IsNullOrEmpty(d)) continue;
+                        line = 20;
                         switch (d)
                         {
                             case "406": ver = 6; break;
@@ -166,13 +198,15 @@ namespace BackUpDLL
                             default: ver = 0; break;
                         }
 
+                        line = 21;
                         return ver;
                     }
                 }
             }
             catch (Exception ex)
             {
-                WebErrorLog.ErrorInstence.StartErrorLog(ex);
+                WebErrorLog.ErrorInstence.StartErrorLog(ex,
+                    $"Error In Line{line} With ConnectionString:{connctionString} AND BackUpFileName:{backUpFileName}");
                 ver = 0;
             }
 
@@ -181,6 +215,8 @@ namespace BackUpDLL
 
         private static float GetDataBaseVersion(string connctionString)
         {
+            var errMsg = $"connctionString = {connctionString} ";
+
             var ver = (float)0;
             try
             {
@@ -209,17 +245,146 @@ namespace BackUpDLL
                 var dt = new DataTable();
                 da.Fill(dt);
                 if (dt.Rows.Count <= 0) ver = 0;
-                var versionName = dt.Rows[0].ItemArray[0].ToString().Remove(0, 11);
+                errMsg += $"fullVersionName = {dt.Rows[0].ItemArray[0]} ";
+                //var versionName = dt.Rows[0].ItemArray[0].ToString().Remove(0, 11);
+                var versionName = dt.Rows[0].ItemArray[0].ToString()
+                    .Replace("SQL Server", "")
+                    .Replace("RC", "")
+                    .Replace("R2", "")
+                    .Trim();
+                errMsg += $"VersionName = {versionName} ";
                 ver = float.Parse(versionName);
             }
             catch (Exception ex)
             {
-                WebErrorLog.ErrorInstence.StartErrorLog(ex);
+                WebErrorLog.ErrorInstence.StartErrorLog(ex, errMsg);
                 ver = 0;
             }
 
             return ver;
 
+        }
+
+        //public static void FRMAutobackUp(bool ShowForm)
+        //{
+        //    FRMExitAutoBackup frmautobackup = new FRMExitAutoBackup();
+        //    //if (!ShowForm)
+        //    //{
+        //    //    frmautobackup.ShowDialog(this);
+        //    //    if (AutoDispose)
+        //    //        frm.Dispose();
+        //    //}
+        //    //else
+        //    //{
+        //    //    frm.ShowInTaskbar = true;
+        //    //    frm.Show();
+        //    //}
+
+        //    frmautobackup.ShowDialog(this);
+        //    //if (frmautobackup.DialogResult == DialogResult.OK)
+        //    //{
+        //    //    return true;
+        //    //}
+
+        //    //return false;
+        //}
+
+
+
+
+        public static string GetServerConnectionString()
+        {
+            try
+            {
+                return Settings.ServerConnectionsString;
+            }
+            catch (Exception ex)
+            {
+                WebErrorLog.ErrorInstence.StartErrorLog(ex);
+            }
+
+            return "";
+        }
+        public static string ConnectionString
+        {
+            get => Settings.ConnectionString;
+            set => Settings.ConnectionString = value;
+        }
+
+        public static CreateDatabaseResult CreateDatabase(string dataBaseName, string serverName)
+        {
+            var ret = new CreateDatabaseResult();
+            if (dataBaseName == "")
+            {
+                ret.Status = EnCreateDataBase.DatabaseNameEmpty;
+                ret.Result.AddReturnedValue(ReturnedState.Error, $"نام بانک اطلاعاتی خالی است.");
+                return ret;
+            }
+
+            if (string.IsNullOrEmpty(serverName))
+            {
+                ret.Status = EnCreateDataBase.ServerConnectionStringError;
+                ret.Result.AddReturnedValue(ReturnedState.Error, $"نام سروریس دهنده sql خالی است.");
+                return ret;
+            }
+
+            try
+            {
+                return DatabaseAction.CreateDataBase(dataBaseName, serverName);
+            }
+            catch (Exception ex)
+            {
+                WebErrorLog.ErrorInstence.StartErrorLog(ex);
+                ret.Result.AddReturnedValue(ex);
+            }
+            return ret;
+        }
+
+        public static async Task<ReturnedSaveFuncInfo> SetRegistery(string sqlConnection, string name)
+        {
+            var ret = new ReturnedSaveFuncInfo();
+            try
+            {
+                Microsoft.Win32.Registry.SetValue("HKEY_CURRENT_USER\\Software\\Novin\\" + name + "", "SQLCN",
+                    sqlConnection);
+            }
+            catch (Exception ex)
+            {
+                WebErrorLog.ErrorInstence.StartErrorLog(ex);
+                ret.AddReturnedValue(ex);
+            }
+            return ret;
+        }
+
+        public static async Task MakeDataBase(string dbName, IWin32Window owner)
+        {
+            try
+            {
+                var res = DatabaseAction.CreateDataBase(dbName);
+                if (res.Status == EnCreateDataBase.ServerConnectionStringError)
+                {
+                    MessageBox.Show(owner, $"سرویس sql در دسترس نمیباشد\r\n{res.Result.ErrorMessage}", "پیغام سیستم");
+                    return;
+                }
+
+                for (var i = 0; i < 20; i++)
+                {
+                    res = DatabaseAction.CreateDataBase($"{dbName}_{i}");
+                    if (res.Status != EnCreateDataBase.Success) continue;
+                    var resSetConnection =
+                        await DataBase.SetRegistery(res.ConnectionString, dbName);
+                    if (!resSetConnection.HasError) return;
+                    return;
+                }
+
+                if (res.Result.HasError)
+                {
+                }
+            }
+            catch (Exception ex)
+            {
+                WebErrorLog.ErrorInstence.StartErrorLog(ex);
+            }
         }
     }
 }
