@@ -47,6 +47,7 @@
             this.UserName = new System.Windows.Forms.TextBox();
             this.Label4 = new System.Windows.Forms.Label();
             this.IntegratedSecuriry = new System.Windows.Forms.CheckBox();
+            this.TextBox1 = new System.Windows.Forms.TextBox();
             this.PanelDB.SuspendLayout();
             this.GroupBox1.SuspendLayout();
             this.GroupBox2.SuspendLayout();
@@ -57,6 +58,7 @@
             // 
             this.PanelDB.Controls.Add(this.Label5);
             this.PanelDB.Controls.Add(this.InitialCategory);
+            this.PanelDB.Controls.Add(this.TextBox1);
             this.PanelDB.Location = new System.Drawing.Point(10, 333);
             this.PanelDB.Name = "PanelDB";
             this.PanelDB.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
@@ -84,6 +86,7 @@
             this.InitialCategory.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.InitialCategory.Size = new System.Drawing.Size(127, 28);
             this.InitialCategory.TabIndex = 0;
+            this.InitialCategory.Enter += new System.EventHandler(this.InitialCategory_Enter);
             // 
             // BTNCancel
             // 
@@ -97,6 +100,7 @@
             this.BTNCancel.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.BTNCancel.TabIndex = 12;
             this.BTNCancel.Text = "انصراف";
+            this.BTNCancel.Click += new System.EventHandler(this.BTNCancel_Click);
             // 
             // BTNTestConnection
             // 
@@ -109,6 +113,7 @@
             this.BTNTestConnection.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.BTNTestConnection.TabIndex = 11;
             this.BTNTestConnection.Text = "تست ارتباط";
+            this.BTNTestConnection.Click += new System.EventHandler(this.BTNTestConnection_Click);
             // 
             // BTNOK
             // 
@@ -121,6 +126,7 @@
             this.BTNOK.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.BTNOK.TabIndex = 10;
             this.BTNOK.Text = "تاييد";
+            this.BTNOK.Click += new System.EventHandler(this.BTNOK_Click);
             // 
             // Label2
             // 
@@ -174,6 +180,7 @@
             this.DataSource.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.DataSource.Size = new System.Drawing.Size(220, 28);
             this.DataSource.TabIndex = 0;
+            this.DataSource.SelectedIndexChanged += new System.EventHandler(this.DataSource_SelectedIndexChanged);
             // 
             // Label1
             // 
@@ -253,13 +260,24 @@
             this.IntegratedSecuriry.AutoSize = true;
             this.IntegratedSecuriry.Checked = true;
             this.IntegratedSecuriry.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.IntegratedSecuriry.Location = new System.Drawing.Point(216, 23);
+            this.IntegratedSecuriry.Location = new System.Drawing.Point(186, 23);
             this.IntegratedSecuriry.Name = "IntegratedSecuriry";
             this.IntegratedSecuriry.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.IntegratedSecuriry.Size = new System.Drawing.Size(203, 24);
             this.IntegratedSecuriry.TabIndex = 0;
             this.IntegratedSecuriry.Text = "احراز هويت توسط ويندوز انجام شود";
             this.IntegratedSecuriry.UseVisualStyleBackColor = true;
+            this.IntegratedSecuriry.CheckedChanged += new System.EventHandler(this.IntegratedSecuriry_CheckedChanged);
+            // 
+            // TextBox1
+            // 
+            this.TextBox1.Font = new System.Drawing.Font("B Titr", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(178)));
+            this.TextBox1.Location = new System.Drawing.Point(169, 4);
+            this.TextBox1.Name = "TextBox1";
+            this.TextBox1.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.TextBox1.Size = new System.Drawing.Size(129, 27);
+            this.TextBox1.TabIndex = 0;
+            this.TextBox1.Visible = false;
             // 
             // FRMInitialSettings
             // 
@@ -283,6 +301,8 @@
             this.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "تنظیمات ارتباط با شبکه";
+            this.Load += new System.EventHandler(this.FRMInitialSettings_Load);
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.FRMInitialSettings_KeyDown);
             this.PanelDB.ResumeLayout(false);
             this.PanelDB.PerformLayout();
             this.GroupBox1.ResumeLayout(false);
@@ -314,5 +334,6 @@
         internal System.Windows.Forms.TextBox UserName;
         internal System.Windows.Forms.Label Label4;
         internal System.Windows.Forms.CheckBox IntegratedSecuriry;
+        internal System.Windows.Forms.TextBox TextBox1;
     }
 }

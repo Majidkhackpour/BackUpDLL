@@ -219,6 +219,12 @@
     <Compile Include="DataBase.cs" />
     <Compile Include="DatabaseAction.cs" />
     <Compile Include="DataBaseBackUpInfo.cs" />
+    <Compile Include="FRMInitialSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FRMInitialSettings.Designer.cs">
+      <DependentUpon>FRMInitialSettings.cs</DependentUpon>
+    </Compile>
     <Compile Include="frmSetConnectionString.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -227,9 +233,6 @@
     </Compile>
     <Compile Include="FRMSetSqlEngine.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="FRMSetSqlEngine.Designer.cs">
-      <DependentUpon>FRMSetSqlEngine.cs</DependentUpon>
     </Compile>
     <Compile Include="PathInformation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -250,6 +253,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="FRMInitialSettings.resx">
+      <DependentUpon>FRMInitialSettings.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmSetConnectionString.resx">
       <DependentUpon>frmSetConnectionString.cs</DependentUpon>
     </EmbeddedResource>
