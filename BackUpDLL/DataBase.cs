@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.SqlServer.Management.Smo;
 using Services;
 using SharpCompress.Archives;
 using SharpCompress.Archives.GZip;
@@ -345,7 +344,7 @@ namespace BackUpDLL
             var ret = new ReturnedSaveFuncInfo();
             try
             {
-                Microsoft.Win32.Registry.SetValue("HKEY_CURRENT_USER\\Software\\Novin\\" + name + "", "SQLCN",
+                Microsoft.Win32.Registry.SetValue("HKEY_CURRENT_USER\\Software\\Arad\\" + name + "", "SQLCN",
                     sqlConnection);
             }
             catch (Exception ex)
